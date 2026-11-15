@@ -257,6 +257,11 @@ button.g:hover{background:#ffffff0d}
 .bgmh{width:100%}.bgmh .bgm{justify-content:center}
 
 .bgmw{font-size:11.5px;color:#ffe600;opacity:.8;margin-top:4px;text-align:center}
+
+.dice.rolling .die{animation:droll .6s cubic-bezier(.2,.75,.3,1)}.dice.rolling .die+.die{animation:droll2 .64s cubic-bezier(.2,.75,.3,1)}
+@keyframes droll{0%{transform:translateY(0) rotate(0) scale(1)}35%{transform:translateY(-1cqw) rotate(250deg) scale(1.04)}70%{transform:translateY(0) rotate(345deg) scale(.98)}100%{transform:translateY(0) rotate(360deg) scale(1)}}
+@keyframes droll2{0%{transform:translateY(0) rotate(0) scale(1)}35%{transform:translateY(-.8cqw) rotate(-240deg) scale(1.04)}70%{transform:translateY(0) rotate(-344deg) scale(.98)}100%{transform:translateY(0) rotate(-360deg) scale(1)}}
+.bbig button.on{background:#fff6cf;box-shadow:0 0 0 .35cqw #ffd400,0 .5cqw 0 #0004}.bbig button.on small{color:#b4410f}
 </style>
 </head>
 <body>
@@ -579,7 +584,7 @@ function land(s,pi){
     const o=s.owners[i];
     if(i===SEOUL&&s.inst){lg(s,s.inst.p===pi?p.name+" 서울 분할 납부 중":"서울은 "+s.players[s.inst.p].name+"님이 분할 구매 중");}
     else if(o==null){if(p.money>=(i===SEOUL?INST[0]:t.p)){s.phase="buy";return;}lg(s,p.name+": "+t.n+" 구매 자금 부족");}
-    else if(o===pi){if(canBuild(s,pi,i)){s.phase="build";s.pend={i:i};return;}}
+    else if(o===pi){if(canBuild(s,pi,i)){s.phase="build";s.pend={i:i,base:(s.bl[i]||[0,0,0]).slice()};return;}}
     else if(o!==pi){
       const tl=toll(s,i);
       if(tl>0){
@@ -638,7 +643,7 @@ const bldIcons=(b,popK)=>{const a=[];for(let k=0;k<b[0];k++)a.push(0);if(b[1])a.
 const PIPS={1:[4],2:[0,8],3:[0,4,8],4:[0,2,6,8],5:[0,2,4,6,8],6:[0,2,3,5,6,8]};
 const dieHTML=n=>'<div class="die'+(n===1?' one':'')+'">'+[0,1,2,3,4,5,6,7,8].map(k=>'<i'+(PIPS[n]&&PIPS[n].includes(k)?' class="on"':'')+'></i>').join("")+'</div>';
 let EVDIS=0,EVANI=0,EVT=0,POWN={},PREADY=false,PBL={},MODAL="",BOOKP=0,BOOKD="",SELP="";
-const APPVER="0.22";
+const APPVER="0.23";
 const LMAXD=500,lmax=s=>(s&&s.opt&&s.opt.max)||LMAXD,TIER=300,RATE2=0.035;let loanDraft="",DRN=-1,dTimer=0;let NAME="",CODE="",PV=null,KDIS=0,KANI=0,wasIn=false,joinTried=false,ARM="",armT=0,toastT=0;
 FILT="me";
 function toast(m){const t=$("toast");if(!t)return;t.textContent=m;t.classList.add("on");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("on"),2600);}
@@ -768,7 +773,7 @@ function act(a,arg){
   if(!S||!NET.ready)return;EVQ=[];
   const s=clone(S),me=s.players.findIndex(p=>p.id===uid),my=me>=0&&s.turn===me,p=s.players[me],host=s.host===uid,live=s.phase!=="lobby"&&s.phase!=="end";
   const dbt=live?s.players.findIndex(q=>!q.out&&q.money<0):-1;
-  if(dbt>=0&&(["roll","warp","buy","buyinst","pass","take","notake","usepass","paytoll","useescape","sellescape","builddone","board","noboard","prize","keyok"].includes(a)||(a==="bld"&&String(arg).split(":")[2]==="1")))return;
+  if(dbt>=0&&(["roll","warp","buy","buyinst","pass","take","notake","usepass","paytoll","useescape","sellescape","builddone","board","noboard","prize","keyok","bcyc"].includes(a)||(a==="bld"&&String(arg).split(":")[2]==="1")))return;
   if(a==="join"){
     if(me>=0||s.players.length>=4||s.phase!=="lobby")return;
     s.players.push({id:uid,name:NAME||"플레이어",col:freeCol(s),pos:0,money:0,jail:0,out:false,space:false,cards:[]});lg(s,(NAME||"플레이어")+"님 입장");
@@ -852,7 +857,7 @@ function act(a,arg){
     s.kc=null;payInst(s,me);p.space=false;lg(s,p.name+" 🚀 우주여행 → "+T[arg].n);fwd(s,me,arg);land(s,me);
   }else if(a==="buy"&&s.phase==="buy"){
     const t=T[p.pos];if(p.money<t.p)return;p.money=fm(p.money-t.p);s.owners[p.pos]=me;s.bl[p.pos]=BLK.has(p.pos)?null:[0,0,0];lg(s,p.name+" "+t.n+" 구매 (-"+t.p+"만원)");
-    if(canBuild(s,me,p.pos)){s.phase="build";s.pend={i:p.pos};}else fin(s);
+    if(canBuild(s,me,p.pos)){s.phase="build";s.pend={i:p.pos,base:[0,0,0]};}else fin(s);
   }else if(a==="buyinst"&&s.phase==="buy"&&p.pos===SEOUL&&!s.inst&&p.money>=INST[0]){
     p.money=fm(p.money-INST[0]);s.inst={p:me,n:1};lg(s,p.name+" 서울 3회 분할 구매 시작 (1회차 "+INST[0]+"만원)");fin(s);
   }else if(a==="take"&&s.phase==="take"){
@@ -874,7 +879,13 @@ function act(a,arg){
     if(s.owners[i]!==me||BLK.has(i))return;
     const b=s.bl[i]=s.bl[i]||[0,0,0],cap=[2,1,1][k],c=bc(i,k);
     if(b[k]>=cap||p.money<c)return;b[k]++;p.money=fm(p.money-c);lg(s,p.name+" "+T[i].n+" "+BI[k]+" 건설 (-"+c+"만원)");
-    if(!canBuild(s,me,i))fin(s);
+  }else if(a==="bcyc"&&s.phase==="build"&&s.pend){
+    // 누를 때마다 하나 더 짓고, 더 지을 수 없으면 이번에 지은 것을 모두 취소(환불): 별장 0→1→2→0, 빌딩·호텔 0→1→0
+    const i=s.pend.i,k=+arg;if(!(k>=0&&k<3)||s.owners[i]!==me||BLK.has(i))return;
+    const b=s.bl[i]=s.bl[i]||[0,0,0],base=(s.pend.base||[0,0,0])[k],cap=[2,1,1][k],c=bc(i,k);
+    if(b[k]<cap&&p.money>=c){b[k]++;p.money=fm(p.money-c);lg(s,p.name+" "+T[i].n+" "+BI[k]+" 건설 (-"+c+"만원)");}
+    else if(b[k]>base){const n=b[k]-base,r=fm(n*c);b[k]=base;p.money=fm(p.money+r);lg(s,p.name+" "+T[i].n+" "+BI[k]+" 건설 취소 (+"+r+"만원)");}
+    else return;
   }else if(a==="builddone"&&s.phase==="build")fin(s);
   else if(a==="keyok"&&s.phase==="keygo"){const c=s.pend.c;s.pend=null;s.phase="move";applyCard(s,me,c);}
   else if(a==="board"&&s.phase==="space"){
@@ -936,7 +947,7 @@ addEventListener("resize",()=>{if(S)renderTokens(S);});
 const HOPMS=260;let PS=null,FUNDV=0;let DPOS={},MOVING=false,MVT=0,MVRN=null,MVWAIT=0,HOP={};
 function syncMove(s){
   const lobby=s.phase==="lobby";
-  if(s.rn!==MVRN){if(MVRN!==null&&!lobby)MVWAIT=Date.now()+1000;MVRN=s.rn;}
+  if(s.rn!==MVRN){if(MVRN!==null&&!lobby)MVWAIT=Date.now()+680;MVRN=s.rn;}
   let lag=false;
   s.players.forEach(p=>{if(DPOS[p.id]==null||lobby||p.out){DPOS[p.id]=p.pos;return;}if(DPOS[p.id]!==p.pos)lag=true;});
   MOVING=lag;
@@ -1011,7 +1022,9 @@ function renderBoard(s,me){
       else c+="<div>🚀 "+esc(cur.name)+"님이 우주여행 탑승을 고민 중</div>";
     }else if(s.phase==="build"){
       const i=s.pend.i,b=s.bl[i]||[0,0,0];
-      if(my)c+='<div class="bq">🏗️ <b>'+T[i].n+'</b>에 건물을 지을까요?</div><div class="bbig">'+[0,1,2].map(k=>{const cap=[2,1,1][k],cost=bc(i,k),full=b[k]>=cap;return '<button data-b="'+i+':'+k+':1"'+(full||cur.money<cost?' disabled':'')+'><span class="bsv">'+BSV[k]+'</span><b>'+["별장","빌딩","호텔"][k]+'</b><small>'+(full?'다 지었어요':cost+'만원')+'</small><i>'+b[k]+'/'+cap+'</i></button>';}).join("")+'</div><div class="bst">내 돈 '+fm(cur.money)+'만원 · 지금 통행료 <b>'+toll(s,i)+'만원</b></div><button class="g" data-a="builddone">다 지었어요</button>';
+      const base=s.pend.base||[0,0,0];
+      if(my)c+='<div class="bq">🏗️ <b>'+T[i].n+'</b>에 건물을 지을까요?</div><div class="bbig">'+[0,1,2].map(k=>{const cap=[2,1,1][k],cost=bc(i,k),can=b[k]<cap&&cur.money>=cost,mine=b[k]-base[k],tip=can?'+'+cost+'만원':mine>0?'취소 +'+fm(mine*cost)+'만원':b[k]>=cap?'다 지었어요':'돈 부족';
+        return '<button data-a="bcyc" data-v="'+k+'"'+(!can&&mine<=0?' disabled':'')+(mine>0?' class="on"':'')+'><span class="bsv">'+BSV[k]+'</span><b>'+["별장","빌딩","호텔"][k]+'</b><small>'+tip+'</small><i>'+b[k]+'/'+cap+(mine>0?' · 이번에 '+mine:'')+'</i></button>';}).join("")+'</div><div class="bst">한 번 더 누르면 '+'취소돼요 · 별장은 1채 → 2채 → 취소 순서예요<br>내 돈 '+fm(cur.money)+'만원 · 지금 통행료 <b>'+toll(s,i)+'만원</b></div><button data-a="builddone">다 지었어요</button>';
       else c+="<div>"+esc(cur.name)+"님이 "+T[i].n+"에 건물을 짓는 중</div>";
     }else if(s.phase==="pay"){
       c+=my?"<div>"+s.pend.n+" 통행료 "+s.pend.t+"만원</div>"+(cur.money<s.pend.t?'<div class="dbl">돈이 부족해요! 대출을 받거나 땅 증서에서 땅을 팔 수 있어요</div>':'')+"<div>"+(hasPass(cur)?'<button data-a="usepass">우대권 사용</button> ':'')+"<button class=\"g\" data-a=\"paytoll\">지불</button></div>":"<div>"+esc(cur.name)+"님이 통행료 처리 중</div>";
@@ -1044,8 +1057,8 @@ function renderBoard(s,me){
   $("b").innerHTML=h+'<div class="c'+(showK?' wk':cd!=null?' wd':'')+'">'+mid+'<div class="ctl">'+evb+c+"</div></div>";
   if(s.rn!=null&&s.rn!==DRN){
     const first=DRN===-1;DRN=s.rn;
-    if(!first&&!showK){const el=$("dc");if(el){el.classList.add("rolling");clearTimeout(dTimer);const fin2=s.dice.slice(),steps=[70,150,240,350,490,660];let n=0;
-      const tick=()=>{const e2=$("dc");if(!e2)return;const ds=e2.querySelectorAll(".die");if(n<steps.length){ds.forEach(d=>{d.outerHTML;});e2.querySelectorAll(".die").forEach((d,j)=>{const v=1+Math.random()*6|0,nd=document.createElement("div");nd.innerHTML=dieHTML(v);d.innerHTML=nd.firstChild.innerHTML;d.className=nd.firstChild.className;});n++;dTimer=setTimeout(tick,n<steps.length?steps[n]-steps[n-1]:900-steps[steps.length-1]);}
+    if(!first&&!showK){const el=$("dc");if(el){el.classList.add("rolling");clearTimeout(dTimer);const fin2=s.dice.slice(),steps=[35,75,120,170,230,300,380,470];let n=0;
+      const tick=()=>{const e2=$("dc");if(!e2)return;const ds=e2.querySelectorAll(".die");if(n<steps.length){ds.forEach(d=>{d.outerHTML;});e2.querySelectorAll(".die").forEach((d,j)=>{const v=1+Math.random()*6|0,nd=document.createElement("div");nd.innerHTML=dieHTML(v);d.innerHTML=nd.firstChild.innerHTML;d.className=nd.firstChild.className;});n++;dTimer=setTimeout(tick,n<steps.length?steps[n]-steps[n-1]:600-steps[steps.length-1]);}
         else{e2.querySelectorAll(".die").forEach((d,j)=>{const nd=document.createElement("div");nd.innerHTML=dieHTML(fin2[j]);d.innerHTML=nd.firstChild.innerHTML;d.className=nd.firstChild.className;});e2.classList.remove("rolling");}};
       dTimer=setTimeout(tick,steps[0]);}}
   }
