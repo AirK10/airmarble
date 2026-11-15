@@ -57,7 +57,7 @@ input{padding:8px;border-radius:8px;border:1px solid #00f0ff66;background:#0b0b1
 .or{color:#8890b8;font-size:13px;letter-spacing:.3em}
 .row{display:flex;gap:8px;width:100%}.row .ni{flex:1;text-transform:uppercase;letter-spacing:.3em}.row .nb{width:auto;padding:14px 22px}
 .hm{min-height:20px;color:#ffe600;text-shadow:0 0 8px #ffe60077;text-align:center;font-size:14px}
-.mode{color:#6f7aa8;font-size:12px;text-align:center}
+.mode{color:#6f7aa8;font-size:12px;text-align:center;letter-spacing:.06em;margin-top:6px}
 #toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,30px);opacity:0;transition:.25s;background:#0b0b1a;border:1.5px solid #ff2bd6;color:#fff;padding:10px 18px;border-radius:12px;box-shadow:0 0 18px #ff2bd677;z-index:50;pointer-events:none;font-size:15px}
 #toast.on{opacity:1;transform:translate(-50%,0)}
 /* panels */
@@ -255,6 +255,8 @@ button.g:hover{background:#ffffff0d}
 .bgm{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:13px;padding:6px 8px;border:1px solid #ffffff17;border-radius:10px;background:#ffffff06}
 .bgm span{flex:1;opacity:.9}.bgm b{min-width:38px;text-align:center;color:#9feeff}.bgm.off{opacity:.6}.bgm button.sm{padding:2px 9px;font-size:14px}.bgm button:disabled{opacity:.35}
 .bgmh{width:100%}.bgmh .bgm{justify-content:center}
+
+.bgmw{font-size:11.5px;color:#ffe600;opacity:.8;margin-top:4px;text-align:center}
 </style>
 </head>
 <body>
@@ -636,6 +638,7 @@ const bldIcons=(b,popK)=>{const a=[];for(let k=0;k<b[0];k++)a.push(0);if(b[1])a.
 const PIPS={1:[4],2:[0,8],3:[0,4,8],4:[0,2,6,8],5:[0,2,4,6,8],6:[0,2,3,5,6,8]};
 const dieHTML=n=>'<div class="die'+(n===1?' one':'')+'">'+[0,1,2,3,4,5,6,7,8].map(k=>'<i'+(PIPS[n]&&PIPS[n].includes(k)?' class="on"':'')+'></i>').join("")+'</div>';
 let EVDIS=0,EVANI=0,EVT=0,POWN={},PREADY=false,PBL={},MODAL="",BOOKP=0,BOOKD="",SELP="";
+const APPVER="0.22";
 const LMAXD=500,lmax=s=>(s&&s.opt&&s.opt.max)||LMAXD,TIER=300,RATE2=0.035;let loanDraft="",DRN=-1,dTimer=0;let NAME="",CODE="",PV=null,KDIS=0,KANI=0,wasIn=false,joinTried=false,ARM="",armT=0,toastT=0;
 FILT="me";
 function toast(m){const t=$("toast");if(!t)return;t.textContent=m;t.classList.add("on");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("on"),2600);}
@@ -1161,7 +1164,7 @@ function renderRight(s,me){
 
 // ===== 배경음악: 각자 따로 켜고 끔, 볼륨 10% 단위, 끊김 없이 반복 =====
 const BGM={ctx:null,tr:[{src:"bgm1.mp3",name:"대기실 음악",buf:null,st:"",node:null,gain:null},{src:"bgm2.mp3",name:"게임 음악",buf:null,st:"",node:null,gain:null}],cur:-1,
-  set:(()=>{let o=null;try{o=JSON.parse(lsGet("am_bgm")||"null")}catch(_){}return Object.assign({on:[true,true],v:[50,20]},o||{});})(),
+  set:(()=>{let o=null;try{o=JSON.parse(lsGet("am_bgm")||"null")}catch(_){}if(o&&o.ver!==3)o.v=[30,20];return Object.assign({on:[true,true],v:[30,20],ver:3},o||{},{ver:3});})(),
   save(){lsSet("am_bgm",JSON.stringify(this.set));},
   want(){return document.body.classList.contains("ingame")&&S&&S.phase!=="lobby"?1:0;},
   ensure(){if(this.ctx)return this.ctx;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return null;try{this.ctx=new AC();}catch(_){return null;}return this.ctx;},
@@ -1194,16 +1197,15 @@ const BGM={ctx:null,tr:[{src:"bgm1.mp3",name:"대기실 음악",buf:null,st:"",n
       const g=this.tr[k].gain;if(g){g.gain.cancelScheduledValues(ctx.currentTime);g.gain.setValueAtTime(g.gain.value,ctx.currentTime);g.gain.linearRampToValueAtTime(this.vol(k),ctx.currentTime+(this.cur!==k?1:.15));}}
     this.cur=k;
   },
-  unlock(){const ctx=this.ensure();if(!ctx)return;if(ctx.state==="suspended"){try{ctx.resume().then(()=>this.sync(),()=>{});}catch(_){}}else this.sync();}
+  unlock(){const ctx=this.ensure();if(!ctx)return;if(ctx.state!=="running"){try{ctx.resume().then(()=>{this.sync();bgmUI();},()=>{});}catch(_){}}else this.sync();}
 };
 function bgmCtl(k){
-  const t=BGM.tr[k],on=BGM.set.on[k],v=BGM.set.v[k];
+  const t=BGM.tr[k],on=BGM.set.on[k],v=BGM.set.v[k],held=on&&t.st==="ok"&&BGM.ctx&&BGM.ctx.state!=="running";
   if(t.st==="none")return '<div class="bgm off" title="'+t.src+' 파일을 index.html과 같은 곳에 올리면 재생돼요">🎵 '+t.name+' · 음악 파일이 없어요</div>';
-  return '<div class="bgm'+(on?'':' off')+'"><button class="g sm" data-m="tog" data-k="'+k+'">'+(on?'🔊':'🔇')+'</button><span>'+t.name+'</span><button class="g sm" data-m="dn" data-k="'+k+'"'+(!on||v<=0?' disabled':'')+'>−</button><b>'+v+'%</b><button class="g sm" data-m="up" data-k="'+k+'"'+(!on||v>=100?' disabled':'')+'>+</button></div>';
+  return '<div class="bgm'+(on?'':' off')+'"><button class="g sm" data-m="tog" data-k="'+k+'">'+(on?'🔊':'🔇')+'</button><span>'+t.name+'</span><button class="g sm" data-m="dn" data-k="'+k+'"'+(!on||v<=0?' disabled':'')+'>−</button><b>'+v+'%</b><button class="g sm" data-m="up" data-k="'+k+'"'+(!on||v>=100?' disabled':'')+'>+</button></div>'+(held?'<div class="bgmw">브라우저가 소리를 막고 있어요 · 아무 곳이나 한 번 누르거나 이름을 입력하면 나와요</div>':'');
 }
 function bgmUI(){const h=$("bgmh");if(h)h.innerHTML=bgmCtl(0);const g=$("bgmg");if(g)g.innerHTML=bgmCtl(BGM.want());}
-document.addEventListener("pointerdown",()=>BGM.unlock(),true);
-document.addEventListener("keydown",()=>BGM.unlock(),true);
+["pointerdown","pointerup","mousedown","touchstart","keydown","click"].forEach(ev=>document.addEventListener(ev,()=>BGM.unlock(),true));
 document.addEventListener("click",e=>{
   const m=e.target.closest("[data-m]");if(!m)return;e.stopPropagation();
   const k=+m.dataset.k,a=m.dataset.m;
@@ -1268,8 +1270,9 @@ document.addEventListener("keydown",e=>{if(MODAL){if(e.key==="Escape"){MODAL="";
   hmsg("준비 중...");
   await NET.boot();
   hmsg(NET.mode==="off"?"Claude에 로그인한 상태에서 열어 주세요":"");
-  bgmUI();BGM.load(0);
-  $("mode").textContent=NET.mode==="claude"?"Claude 온라인 모드":NET.mode==="peer"?"P2P 온라인 모드 · 방장 브라우저가 서버 역할을 해요":"";
+  bgmUI();BGM.load(0).then(()=>{BGM.unlock();setTimeout(bgmUI,300);});
+  try{if(!$("hn").value)$("hn").focus();}catch(_){}
+  $("mode").textContent="v"+APPVER+" · © airk10";
   if(NET.mode!=="off"&&$("hc").value&&$("hn").value.trim())enter(false);
 })();
 </script>
